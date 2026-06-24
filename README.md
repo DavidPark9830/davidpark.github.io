@@ -1,11 +1,14 @@
 # Gyeongmin Park Portfolio (GitHub Pages)
 
-This repository contains a static portfolio/CV website built with `index.html`.
+This repository contains a static portfolio/CV website for GitHub Pages.
 
 ## Project Structure
 
-- `index.html`: Main portfolio page
-- `images/`: Profile photo and organization/conference logos
+- `index.html`: Main portfolio markup
+- `assets/css/main.css`: Site styles
+- `assets/js/main.js`: Navigation, reveal animation, and PDF preview behavior
+- `assets/img/`: Profile photo and organization/conference logos
+- `assets/docs/talks/`: Presentation PDF files
 
 ## Notes
 
