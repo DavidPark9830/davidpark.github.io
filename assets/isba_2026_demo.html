@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sketched Gibbs Sampler Runtime Demo</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --panel: #111827;
+      --panel-soft: #172033;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --green: #86efac;
+      --red: #fca5a5;
+      --blue: #93c5fd;
+      --yellow: #fde68a;
+      --border: #2f3a4f;
+      --ink: #1f2937;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #fffaf0 0%, var(--bg) 52%, #e9e2d4 100%);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color: var(--ink);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 28px;
+    }
+
+    .wrap {
+      width: min(1180px, 100%);
+    }
+
+    header {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 52px);
+      letter-spacing: -0.055em;
+      line-height: 1.02;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .terminal {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 18px 45px rgba(17, 24, 39, 0.18);
+      min-height: 610px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .terminal.fast {
+      box-shadow: 0 18px 45px rgba(22, 163, 74, 0.18);
+    }
+
+    .bar {
+      height: 42px;
+      background: var(--panel-soft);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 9px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.red { background: #f87171; }
+    .dot.yellow { background: #fbbf24; }
+    .dot.green { background: #34d399; }
+
+    .title {
+      margin-left: 8px;
+      color: var(--text);
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .screen {
+      padding: 18px;
+      color: var(--text);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .method {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      border-bottom: 1px dashed #374151;
+      padding-bottom: 14px;
+    }
+
+    .method h2 {
+      margin: 0 0 6px;
+      font-size: 19px;
+      letter-spacing: -0.02em;
+    }
+
+    .tag {
+      border: 1px solid #374151;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .desc {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .stat {
+      border: 1px solid #273244;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .value {
+      color: white;
+      font-size: 25px;
+      letter-spacing: -0.04em;
+      white-space: nowrap;
+    }
+
+    .exact-color { color: var(--red); }
+    .proposed-color { color: var(--green); }
+
+    .progress-wrap { margin-top: 2px; }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .progress {
+      height: 18px;
+      background: #0b1220;
+      border: 1px solid #273244;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      transition: width 0.05s linear;
+    }
+
+    .fill.exact { background: linear-gradient(90deg, #7f1d1d, #fca5a5); }
+    .fill.proposed { background: linear-gradient(90deg, #14532d, #86efac); }
+
+    .console {
+      background: #050816;
+      border: 1px solid #273244;
+      border-radius: 12px;
+      padding: 12px;
+      min-height: 285px;
+      max-height: 285px;
+      overflow: hidden;
+      font-size: 12px;
+      line-height: 1.45;
+      color: #d1d5db;
+      white-space: pre-wrap;
+    }
+
+    .prompt { color: var(--blue); }
+    .ok { color: var(--green); }
+    .warn { color: var(--yellow); }
+    .slow { color: var(--red); }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Runtime comparison for 5,000 Gibbs iterations</h1>
+    </header>
+
+    <section class="grid">
+      <article class="terminal">
+        <div class="bar">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+          <span class="title">R Console — exact_gibbs_sampler.R</span>
+        </div>
+        <div class="screen">
+          <div class="method">
+            <div>
+              <h2>Exact Gibbs sampler</h2>
+              <p class="desc">Full Gaussian update with repeated large matrix operations.</p>
+            </div>
+            <span class="tag">baseline</span>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="label">Iteration</div>
+              <div class="value exact-color"><span id="exactIter">0</span> / 5000</div>
+            </div>
+            <div class="stat">
+              <div class="label">Elapsed time</div>
+              <div class="value"><span id="exactTime">00:00</span></div>
+            </div>
+            <div class="stat">
+              <div class="label">Iterations per second</div>
+              <div class="value"><span id="exactRate">0.0</span></div>
+            </div>
+            <div class="stat">
+              <div class="label">Run</div>
+              <div class="value slow">#<span id="exactRun">1</span></div>
+            </div>
+          </div>
+
+          <div class="progress-wrap">
+            <div class="progress-label">
+              <span>progress</span>
+              <span id="exactPct">0%</span>
+            </div>
+            <div class="progress">
+              <div class="fill exact" id="exactFill"></div>
+            </div>
+          </div>
+
+          <div class="console" id="exactConsole"></div>
+        </div>
+      </article>
+
+      <article class="terminal fast">
+        <div class="bar">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+          <span class="title">R Console — blockwise_sketched_gibbs.R</span>
+        </div>
+        <div class="screen">
+          <div class="method">
+            <div>
+              <h2>Proposed sketched Gibbs sampler</h2>
+              <p class="desc">Exact active block update + sketched inactive covariance approximation.</p>
+            </div>
+            <span class="tag">proposed</span>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="label">Iteration</div>
+              <div class="value proposed-color"><span id="propIter">0</span> / 5000</div>
+            </div>
+            <div class="stat">
+              <div class="label">Elapsed time</div>
+              <div class="value"><span id="propTime">00:00</span></div>
+            </div>
+            <div class="stat">
+              <div class="label">Iterations per second</div>
+              <div class="value"><span id="propRate">0.0</span></div>
+            </div>
+            <div class="stat">
+              <div class="label">Run</div>
+              <div class="value ok">#<span id="propRun">1</span></div>
+            </div>
+          </div>
+
+          <div class="progress-wrap">
+            <div class="progress-label">
+              <span>progress</span>
+              <span id="propPct">0%</span>
+            </div>
+            <div class="progress">
+              <div class="fill proposed" id="propFill"></div>
+            </div>
+          </div>
+
+          <div class="console" id="propConsole"></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    /*
+      Change these values to match your measured runtime.
+      The two samplers loop independently.
+    */
+    const SETTINGS = {
+      totalIterations: 5000,
+
+      // Much slower visual cycle for the exact sampler.
+      exactCycleSeconds: 120,
+
+      // Fast visual cycle for the proposed sampler.
+      proposedCycleSeconds: 7,
+
+      exactIterationsPerSecondText: 0.69,
+      proposedIterationsPerSecondText: 714.3
+    };
+
+    const els = {
+      exactIter: document.getElementById("exactIter"),
+      propIter: document.getElementById("propIter"),
+      exactTime: document.getElementById("exactTime"),
+      propTime: document.getElementById("propTime"),
+      exactRate: document.getElementById("exactRate"),
+      propRate: document.getElementById("propRate"),
+      exactRun: document.getElementById("exactRun"),
+      propRun: document.getElementById("propRun"),
+      exactPct: document.getElementById("exactPct"),
+      propPct: document.getElementById("propPct"),
+      exactFill: document.getElementById("exactFill"),
+      propFill: document.getElementById("propFill"),
+      exactConsole: document.getElementById("exactConsole"),
+      propConsole: document.getElementById("propConsole")
+    };
+
+    const state = {
+      exact: { start: null, run: 1, lastPrinted: -1 },
+      prop: { start: null, run: 1, lastPrinted: -1 }
+    };
+
+    function fmtSeconds(sec) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = Math.floor(sec % 60);
+      if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
+
+    function addLine(box, html) {
+      const lines = box.innerHTML.split("\n").filter(Boolean);
+      lines.push(html);
+      box.innerHTML = lines.slice(-17).join("\n");
+    }
+
+    function initializeConsole(kind) {
+      const isExact = kind === "exact";
+      const box = isExact ? els.exactConsole : els.propConsole;
+      const command = isExact
+        ? `<span class="prompt">&gt; exact_gibbs(iter = 5000)</span>`
+        : `<span class="prompt">&gt; proposed_gibbs(iter = 5000, sketch = TRUE)</span>`;
+
+      box.innerHTML = command + "\n" + `<span class="${isExact ? "slow" : "ok"}"># starting run ${state[kind].run}</span>`;
+    }
+
+    function resetRun(kind, timestamp) {
+      state[kind].start = timestamp;
+      state[kind].lastPrinted = -1;
+      initializeConsole(kind);
+    }
+
+    function updateSampler(kind, timestamp) {
+      const isExact = kind === "exact";
+      const cycle = isExact ? SETTINGS.exactCycleSeconds : SETTINGS.proposedCycleSeconds;
+      const total = SETTINGS.totalIterations;
+      const s = state[kind];
+
+      if (s.start === null) resetRun(kind, timestamp);
+
+      let elapsed = (timestamp - s.start) / 1000;
+      if (elapsed >= cycle) {
+        addLine(
+          isExact ? els.exactConsole : els.propConsole,
+          `<span class="${isExact ? "slow" : "ok"}"># completed run ${s.run}</span>`
+        );
+        s.run += 1;
+        resetRun(kind, timestamp);
+        elapsed = 0;
+      }
+
+      const progress = Math.min(elapsed / cycle, 1);
+      const iter = Math.min(Math.floor(total * progress), total);
+      const pct = Math.floor(progress * 100);
+
+      if (isExact) {
+        els.exactIter.textContent = iter.toLocaleString();
+        els.exactTime.textContent = fmtSeconds(elapsed);
+        els.exactRate.textContent = SETTINGS.exactIterationsPerSecondText.toFixed(2);
+        els.exactRun.textContent = s.run;
+        els.exactPct.textContent = `${pct}%`;
+        els.exactFill.style.width = `${pct}%`;
+      } else {
+        els.propIter.textContent = iter.toLocaleString();
+        els.propTime.textContent = fmtSeconds(elapsed);
+        els.propRate.textContent = SETTINGS.proposedIterationsPerSecondText.toFixed(1);
+        els.propRun.textContent = s.run;
+        els.propPct.textContent = `${pct}%`;
+        els.propFill.style.width = `${pct}%`;
+      }
+
+      // Print every 100 iterations.
+      const printed = Math.floor(iter / 100) * 100;
+      if (printed > s.lastPrinted && printed > 0) {
+        s.lastPrinted = printed;
+        const box = isExact ? els.exactConsole : els.propConsole;
+        const cls = isExact ? "slow" : "ok";
+        const msg = isExact ? "updating full covariance..." : "cached + sketched update";
+        addLine(
+          box,
+          `<span class="${cls}">[${fmtSeconds(elapsed)}]</span> iteration ${String(printed).padStart(4, " ")} / 5000  |  ${msg}`
+        );
+      }
+    }
+
+    function loop(timestamp) {
+      updateSampler("exact", timestamp);
+      updateSampler("prop", timestamp);
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
