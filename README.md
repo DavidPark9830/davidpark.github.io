@@ -9,6 +9,7 @@ This repository contains a static portfolio/CV website for GitHub Pages.
 - `assets/js/main.js`: Navigation, reveal animation, and PDF preview behavior
 - `assets/img/`: Profile photo and organization/conference logos
 - `assets/docs/talks/`: Presentation PDF files
+- `assets/demos/`: Interactive conference demo pages
 
 ## Notes
 
