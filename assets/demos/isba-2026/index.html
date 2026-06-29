@@ -337,13 +337,10 @@
       totalIterations: 5000,
 
       // Much slower visual cycle for the exact sampler.
-      exactCycleSeconds: 120,
+      exactCycleSecondsRange: [110, 130],
 
       // Fast visual cycle for the proposed sampler.
-      proposedCycleSeconds: 2,
-
-      exactIterationsPerSecondText: 0.69,
-      proposedIterationsPerSecondText: 2500.0
+      proposedCycleSecondsRange: [2, 3]
     };
 
     const els = {
@@ -364,9 +361,21 @@
     };
 
     const state = {
-      exact: { start: null, run: 1, lastPrinted: -1 },
-      prop: { start: null, run: 1, lastPrinted: -1 }
+      exact: { start: null, run: 1, lastPrinted: -1, cycleSeconds: null },
+      prop: { start: null, run: 1, lastPrinted: -1, cycleSeconds: null }
     };
+
+    function randomInRange(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function nextCycleSeconds(kind) {
+      const range = kind === "exact"
+        ? SETTINGS.exactCycleSecondsRange
+        : SETTINGS.proposedCycleSecondsRange;
+
+      return randomInRange(range[0], range[1]);
+    }
 
     function fmtSeconds(sec) {
       const h = Math.floor(sec / 3600);
@@ -395,17 +404,18 @@
     function resetRun(kind, timestamp) {
       state[kind].start = timestamp;
       state[kind].lastPrinted = -1;
+      state[kind].cycleSeconds = nextCycleSeconds(kind);
       initializeConsole(kind);
     }
 
     function updateSampler(kind, timestamp) {
       const isExact = kind === "exact";
-      const cycle = isExact ? SETTINGS.exactCycleSeconds : SETTINGS.proposedCycleSeconds;
       const total = SETTINGS.totalIterations;
       const s = state[kind];
 
       if (s.start === null) resetRun(kind, timestamp);
 
+      const cycle = s.cycleSeconds;
       let elapsed = (timestamp - s.start) / 1000;
       if (elapsed >= cycle) {
         addLine(
@@ -424,14 +434,14 @@
       if (isExact) {
         els.exactIter.textContent = iter.toLocaleString();
         els.exactTime.textContent = fmtSeconds(elapsed);
-        els.exactRate.textContent = SETTINGS.exactIterationsPerSecondText.toFixed(2);
+        els.exactRate.textContent = (total / cycle).toFixed(2);
         els.exactRun.textContent = s.run;
         els.exactPct.textContent = `${pct}%`;
         els.exactFill.style.width = `${pct}%`;
       } else {
         els.propIter.textContent = iter.toLocaleString();
         els.propTime.textContent = fmtSeconds(elapsed);
-        els.propRate.textContent = SETTINGS.proposedIterationsPerSecondText.toFixed(1);
+        els.propRate.textContent = (total / cycle).toFixed(1);
         els.propRun.textContent = s.run;
         els.propPct.textContent = `${pct}%`;
         els.propFill.style.width = `${pct}%`;
