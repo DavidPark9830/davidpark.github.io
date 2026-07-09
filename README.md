@@ -4,7 +4,7 @@ This repository contains a static portfolio/CV website for GitHub Pages.
 
 ## Project Structure
 
-- `index.html`: Main portfolio markup
+- `index.html`: Main bilingual portfolio markup
 - `assets/css/main.css`: Site styles
 - `assets/js/main.js`: Navigation, reveal animation, and PDF preview behavior
 - `assets/img/`: Profile photo and organization/conference logos
