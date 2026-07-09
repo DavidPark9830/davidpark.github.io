@@ -417,6 +417,17 @@ h1 {
   letter-spacing: 0.02em;
 }
 
+.section-subhead {
+  margin: 18px 0 10px;
+}
+
+.subsection-title {
+  margin: 0;
+  color: #1b202d;
+  font-size: 1.02rem;
+  font-weight: 800;
+}
+
 .cards {
   display: grid;
   grid-template-columns: 1fr;
